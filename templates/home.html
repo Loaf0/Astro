@@ -49,23 +49,35 @@
                 width: 60%;
                 color: #9ccddc;
             }
-            .publish-post-container {
-                display: flex;
-                flex-direction: column;
-                align-items: start;
+            #post-window {
+                display: none;
+                position: fixed;
+                z-index: 1; 
                 width: 100%;
-                border: 1px solid #062c43;
+                height: 100%;  
+                background-color: rgb(0,0,0);
+                background-color: rgba(0,0,0,0.4);
+                margin: 0;
             }
-            .publish-post-container form {
+            .post-form{
+                border-bottom: 2px solid #062c43;
+                background-color: black;
+                border-radius: 10px;
+                margin: auto;
+                margin-top: 10%;
+                width: 60%;
+                overflow: visible;
+            }
+            .post-form form {
+                padding: 20px;
+                margin: auto;
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
-                width: 100%;
             }
-            .publish-post-container textarea {
+            .post-form input {
                 width: 80%;
                 font-family: inherit;
-                background-color: #000000;
                 color: #ced7e0;
                 padding: 10px;
                 border: none;
@@ -74,7 +86,7 @@
                 overflow: hidden;
                 align-self: start;
             }
-            .publish-post-container button {
+            .post-form button {
                 width: 20%;
                 background-color: #5591a9;
                 color: #062c43;
@@ -99,6 +111,12 @@
                 align-items: start;
                 width: 100%;
                 border-bottom: 1px solid #062c43;
+            }
+            .post-image{
+                width: auto;
+                height: 500px;
+                max-width: 500px;
+                max-height: 500px;
             }
             .user-info {
                 display: flex;
@@ -131,10 +149,30 @@
                 align-items: center;
                 width: 25%;
             }
+            .toggle-post-form {
+                border-radius: 12px;
+                background-color: #054569;
+                color: #ced7e0;
+                z-index: 100;
+            }
         </style>
     </head>
 
     <body>
+        <button class="toggle-post-form" onclick="togglePostWindow()">
+            <p>Post</p>
+        </button>
+
+        <div id="post-window">
+            <div class = "post-form">
+                <form method="POST" action="{{ url_for('home') }}" enctype="multipart/form-data">
+                    <input type="text" name="content" placeholder="What's on your mind?"><br>
+                    <input type="file" name="image" accept="image/*"><br>
+                    <button type="submit">Post</button>
+                </form>
+            </div>
+        </div>
+
         <div class = "left-section-container">
             <div class = "left-section-content">
                 <svg xmlns = "http://www.w3.org/2000/svg" width = "72" height = "72" viewBox = "0 0 24 24" fill = "none" stroke = "currentColor" stroke-width = "2" stroke-linecap = "round" stroke-linejoin = "round" class = "icon icon-tabler icons-tabler-outline icon-tabler-moon-stars"><path stroke = "none" d = "M0 0h24v24H0z" fill = "none"/><path d = "M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/><path d = "M17 4a2 2 0 0 0 2 2a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2a2 2 0 0 0 2 -2"/><path d = "M19 11h2m-1 -1v2" /></svg>
@@ -162,16 +200,6 @@
         </div>
 
         <div class = "center-section-container">
-            <div class = "publish-post-container">
-                <form method="POST" action="{{ url_for('home') }}" enctype="multipart/form-data">
-                    <input type="text" name="content" placeholder="What's on your mind?"><br>
-                    <input type="file" name="image" accept="image/*"><br>
-                    <button type="submit">Post</button>
-                </form>
-            </div>
-            
-            <div href=""></div>
-
             <div class = "feed-container">
                 {% for post in posts %}
                 <div class="post-container">
@@ -181,7 +209,7 @@
                     </div>
                     <div class="post-content">
                         {% if post.image_url %}
-                            <img src="{{ post.image_url }}" alt="Post Image">
+                            <img class="post-image" src="{{ post.image_url }}" alt="Post Image">
                         {% endif %}
                         <p>{{ post.content }}</p>
                     </div>
@@ -196,4 +224,17 @@
         <div class = "right-section-container">
         </div>
     </body>
+
+    <script>
+       const postForm = document.querySelector('#post-window');
+
+        function togglePostWindow() {
+            if (postForm.style.display === 'none' || postForm.style.display === '') {
+                postForm.style.display = 'block';
+            } else {
+                postForm.style.display = 'none';
+            }
+        }
+    </script>
+
 </html>
