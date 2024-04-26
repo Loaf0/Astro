@@ -164,18 +164,20 @@
         <div class = "center-section-container">
             <div class = "publish-post-container">
                 <form method="POST" action="{{ url_for('home') }}" enctype="multipart/form-data">
-                    <input type="text" name="content" placeholder="What's on your mind?" required><br>
+                    <input type="text" name="content" placeholder="What's on your mind?"><br>
                     <input type="file" name="image" accept="image/*"><br>
                     <button type="submit">Post</button>
                 </form>
             </div>
+            
+            <div href=""></div>
 
             <div class = "feed-container">
                 {% for post in posts %}
                 <div class="post-container">
                     <div class="user-info">
-                        <img src="https://via.placeholder.com/40" alt="Profile Picture">
-                        <a href="{{ url_for('profile', username=post.user.username) }}">{{ post.user.username }}</a>
+                        <img src="{{ post.author.profile_image }}" alt="Profile Picture">
+                        <a href="{{ url_for('profile', username=post.author.username) }}">{{ post.author.username }}</a>
                     </div>
                     <div class="post-content">
                         {% if post.image_url %}
