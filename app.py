@@ -13,7 +13,7 @@ hasher = argon2.PasswordHasher()
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.secret_key = '7c19a9c83258791f711591a505b467d9'
-app.config['UPLOAD_FOLDER'] = '.images/posts'
+app.config['UPLOAD_FOLDER'] = 'static/images/posts'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # limit uploads to 16MB
 FILETYPES = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -112,7 +112,7 @@ def register():
             msg = 'Please fill out the form!'
         else:
             hashed_password = hasher.hash(password)
-            new_user = User(username=username, password=hashed_password, email=email, account_creation_date=datetime.now(), profile_image="..\\.images\\required\\Default_Profile_Picture.png", banner_image=".images\\required\\Default_Profile_Picture.png")
+            new_user = User(username=username, password=hashed_password, email=email, account_creation_date=datetime.now(), profile_image="static/images/required/Default_Profile_Picture.png", banner_image="static/images/required/Default_Profile_Picture.png")
             db.session.add(new_user)
             db.session.commit()
             msg = 'You have successfully registered!'
