@@ -50,7 +50,7 @@ def home():
         db.session.commit()
         return redirect(url_for('home'))
 
-    posts = Post.query.all()
+    posts = Post.query.order_by(Post.creation_date.desc()).all()
     return render_template('home.html', session=session, posts=posts)
 
 
@@ -58,19 +58,18 @@ def home():
 def login():
     if request.method == 'POST':
         username = request.form.get('username').strip().lower()
-        password = request.form.get('password')
+        password = request.form.get('password').strip()
         
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter(User.username.ilike(username)).first()
 
-        if user: # statements have to be seperate
-            if argon2.PasswordHasher().verify(user.password, password):
-                session['loggedin'] = True
-                session['id'] = user.userid
-                session['username'] = user.username
-                session['profile_image'] = user.profile_image
-                session['admin'] = bool(user.admin_status)
+        if user and argon2.PasswordHasher().verify(user.password, password):
+            session['loggedin'] = True
+            session['id'] = user.userid
+            session['username'] = user.username
+            session['profile_image'] = user.profile_image
+            session['admin'] = bool(user.admin_status)
 
-                return redirect(url_for('profile', username=session['username']))  
+            return redirect(url_for('profile', username=user.username))
         else:
             msg = 'Invalid username or password'
             return render_template('login.html', msg=msg)
@@ -91,13 +90,13 @@ def register():
         return login_status
 
     msg = ''
-    if request.method == 'POST' and 'username' in request.form and 'password' in request.form and 'email' in request.form:
+    if request.method == 'POST' and 'username' in request.form and 'password' in request.form and 'confirm-password' in request.form and 'email' in request.form:
         email = request.form['email'].strip()
-        username = request.form['username'].strip().lower()
-        password = request.form['password']
-        confirmPassword = request.form['confirm-password']
+        username = request.form['username'].strip()
+        password = request.form['password'].strip()
+        confirmPassword = request.form['confirm-password'].strip()
 
-        account = User.query.filter_by(username=username).first()
+        account = User.query.filter(User.username.ilike(username)).first()
 
         if account:
             msg = 'Account already exists!'
@@ -113,7 +112,7 @@ def register():
             msg = 'Please fill out the form!'
         else:
             hashed_password = hasher.hash(password)
-            new_user = User(username=username, password=hashed_password, email=email, account_creation_date=datetime.now(), profile_image=".images\\required\\Default_Banner_Picture.png", banner_image=".images\\required\\Default_Profile_Picture.png")
+            new_user = User(username=username, password=hashed_password, email=email, account_creation_date=datetime.now(), profile_image="..\\.images\\required\\Default_Profile_Picture.png", banner_image=".images\\required\\Default_Profile_Picture.png")
             db.session.add(new_user)
             db.session.commit()
             msg = 'You have successfully registered!'
@@ -133,7 +132,6 @@ def profile(username):
         return render_template('profile.html', session=session, username=username.capitalize())
     else:
         return "No profile found!", 404
-
 
 
 @app.route("/messages")
