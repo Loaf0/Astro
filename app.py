@@ -112,7 +112,7 @@ def register():
             msg = 'Please fill out the form!'
         else:
             hashed_password = hasher.hash(password)
-            new_user = User(username=username, password=hashed_password, email=email, account_creation_date=datetime.now(), profile_image="static/images/required/Default_Profile_Picture.png", banner_image="static/images/required/Default_Profile_Picture.png")
+            new_user = User(username=username, password=hashed_password, email=email, account_creation_date=datetime.now(), profile_image="/static/images/required/Default_Profile_Picture.png", banner_image="/static/images/required/Default_Banner_Picture.png")
             db.session.add(new_user)
             db.session.commit()
             msg = 'You have successfully registered!'
@@ -129,7 +129,8 @@ def register():
 def profile(username):
     user = User.query.filter_by(username=username).first()
     if user:
-        return render_template('profile.html', session=session, username=username.capitalize())
+        posts = Post.query.filter_by(userid=user.userid).all()
+        return render_template('profile.html', session=session, username=username, user=user, posts=posts)
     else:
         return "No profile found!", 404
 
