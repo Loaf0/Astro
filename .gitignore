@@ -1,5 +1,5 @@
-.images/messages/*
-.images/post/*
-.images/profile/*
+static/images/messages/*
+static/images/post/*
+static/images/profile/*
 instance
 __pycache__
