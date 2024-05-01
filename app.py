@@ -13,7 +13,7 @@ hasher = argon2.PasswordHasher()
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.secret_key = '7c19a9c83258791f711591a505b467d9'
-app.config['UPLOAD_FOLDER'] = 'static/images/posts'
+app.config['UPLOAD_FOLDER'] = 'static/images/userposted'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # limit uploads to 16MB
 FILETYPES = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -29,6 +29,12 @@ def allowed_file(filename):
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.before_request
+def require_login():
+    open_routes = ['login', 'register', 'static']
+    if not session.get('loggedin') and request.endpoint not in open_routes:
+        return redirect(url_for('login'))
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -50,8 +56,21 @@ def home():
         db.session.commit()
         return redirect(url_for('home'))
 
-    posts = Post.query.order_by(Post.creation_date.desc()).all()
-    return render_template('home.html', session=session, posts=posts)
+    show_friends = request.args.get('show_friends', 'no')
+    user_id = session.get('id', None)
+    if user_id:
+        if show_friends == 'yes':
+            friend_ids = db.session.query(Friend.user2_id).filter(Friend.user1_id == user_id, Friend.confirmation == 1).all()
+            friend_ids += db.session.query(Friend.user1_id).filter(Friend.user2_id == user_id, Friend.confirmation == 1).all()
+            friend_ids = {fid[0] for fid in friend_ids} # stop duplicates froms showing
+
+            posts = Post.query.filter(Post.userid.in_(friend_ids)).order_by(Post.creation_date.desc()).all()
+        else:
+            posts = Post.query.order_by(Post.creation_date.desc()).all()
+
+        return render_template('home.html', posts=posts, show_friends=show_friends)
+    else:
+        return redirect(url_for('login'))
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -135,6 +154,46 @@ def profile(username):
         return "No profile found!", 404
 
 
+@app.route('/edit_profile', methods=['GET', 'POST'])
+def edit_profile():
+    if 'loggedin' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['id']
+    user = User.query.get(user_id)
+
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        email = request.form['email'].strip()
+        profile_image = request.files['profile_image']
+        banner_image = request.files['banner_image']
+
+        if profile_image and allowed_file(profile_image.filename):
+            filename = secure_filename(profile_image.filename)
+            profile_image_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+            profile_image_path = os.path.join(app.config['UPLOAD_FOLDER'], profile_image_name)
+            os.makedirs(os.path.dirname(profile_image_path), exist_ok=True)
+            profile_image.save(profile_image_path)
+            user.profile_image = url_for('uploaded_file', filename=profile_image_name)
+
+        if banner_image and allowed_file(banner_image.filename):
+            filename = secure_filename(banner_image.filename)
+            banner_image_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+            banner_image_path = os.path.join(app.config['UPLOAD_FOLDER'], banner_image_name)
+            os.makedirs(os.path.dirname(banner_image_path), exist_ok=True)
+            banner_image.save(banner_image_path)
+            user.banner_image = url_for('uploaded_file', filename=banner_image_name)
+
+        # Update other fields
+        user.username = username
+        user.email = email
+        db.session.commit()
+
+        return redirect(url_for('profile', username=user.username))
+
+    return render_template('edit_profile.html', user=user)
+
+
 @app.route("/messages")
 def messages():
     return render_template("messages.html", session=session)
@@ -145,9 +204,24 @@ def settings():
     return render_template("settings.html", session=session)
 
 
-@app.route("/notifications")
+@app.route('/notifications')
 def notifications():
-    return render_template("notifications.html", session=session)
+    if 'id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['id']
+    friend_requests = Friend.query.filter_by(user2_id=user_id, confirmation=0).all()
+    current_user = User.query.get(user_id)  # Retrieve the current user based on session ID
+
+    # Prepare a dictionary of senders to pass to the template
+    senders = {}
+    for request in friend_requests:
+        # Determine the sender ID depending on the requester
+        sender_id = request.user1_id if request.user1_id != user_id else request.user2_id
+        # Retrieve the sender user object
+        senders[sender_id] = User.query.get(sender_id)
+
+    return render_template("notifications.html", friend_requests=friend_requests, current_user=current_user, senders=senders)
 
 
 @app.route('/create_post', methods=['POST'])
@@ -173,7 +247,46 @@ def create_post():
     else:
         return redirect(url_for('login'))
 
-# check status of user
+@app.route('/send_friend_request/<username>')
+def send_friend_request(username):
+    sender_id = session.get('id')
+    receiver = User.query.filter_by(username=username).first()
+    if receiver and sender_id != receiver.userid:
+        new_friend_request = Friend(user1_id=sender_id, user2_id=receiver.userid, confirmation=0)
+        db.session.add(new_friend_request)
+        db.session.commit()
+        return redirect(url_for('profile', username=receiver.username))
+    else:
+        return "Invalid request"
+
+
+@app.route('/accept_friend_request/<int:user1_id>')
+def accept_friend_request(user1_id):
+    if 'id' not in session:
+        return redirect(url_for('login'))
+
+    friend_request = Friend.query.filter_by(user1_id=user1_id, user2_id=session['id']).first()
+    if friend_request:
+        friend_request.confirmation = 1
+        db.session.commit()
+        return redirect(url_for('notifications'))
+    else:
+        return "Invalid request"
+
+@app.route('/delete_friend_request/<int:user1_id>')
+def delete_friend_request(user1_id):
+    if 'id' not in session:
+        return redirect(url_for('login'))
+
+    friend_request = Friend.query.filter_by(user1_id=user1_id, user2_id=session['id']).first()
+    if friend_request:
+        db.session.delete(friend_request)
+        db.session.commit()
+        return redirect(url_for('notifications'))
+    else:
+        return "Invalid request"
+
+
 def require_login_status(must_be_logged_out=False, must_be_admin=False, destination='profile'):
     if 'loggedin' not in session.keys() and not must_be_logged_out:
         return redirect(url_for('login') + '?destination=' + destination)

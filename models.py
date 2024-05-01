@@ -7,7 +7,7 @@ class User(db.Model):
     userid = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(255), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
-    email = db.Column(db.String(255), unique=True, nullable=False)
+    email = db.Column(db.String(255), nullable=False)
     account_creation_date = db.Column(db.DateTime, nullable=False)
     admin_status = db.Column(db.Boolean, nullable=False, default=False)
     profile_image = db.Column(db.String(255), nullable=True)
