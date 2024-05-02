@@ -233,14 +233,11 @@ def notifications():
 
     user_id = session['id']
     friend_requests = Friend.query.filter_by(user2_id=user_id, confirmation=0).all()
-    current_user = User.query.get(user_id)  # Retrieve the current user based on session ID
+    current_user = User.query.get(user_id) 
 
-    # Prepare a dictionary of senders to pass to the template
     senders = {}
     for request in friend_requests:
-        # Determine the sender ID depending on the requester
         sender_id = request.user1_id if request.user1_id != user_id else request.user2_id
-        # Retrieve the sender user object
         senders[sender_id] = User.query.get(sender_id)
 
     return render_template("notifications.html", friend_requests=friend_requests, current_user=current_user, senders=senders)
