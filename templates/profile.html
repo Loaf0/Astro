@@ -59,6 +59,7 @@
             }
             .post-container {
                 display: flex;
+                overflow: hidden;
                 flex-direction: column;
                 align-items: start;
                 width: 100%;
@@ -67,7 +68,6 @@
             .post-image{
                 width: auto;
                 height: 500px;
-                max-width: 500px;
                 max-height: 500px;
             }
             .user-info {
@@ -198,6 +198,21 @@
                 background-color: #4e859a;
                 color: #062c43;
             }
+            .friend-request{
+                border-radius: 5px;
+                background-color: #4e859a;
+                color: #062c43;
+                padding: 10px;
+                border: none;
+            }
+            .delete-button{
+                margin-left: 100%;
+                border-radius: 5px;
+                background-color: #4e859a;
+                color: #062c43;
+                padding: 10px;
+                border: none;
+            }
             .post-date {
                 font-size: 12px;
                 color: #759ba7;
@@ -253,7 +268,7 @@
                         {% if not already_friends %}
                             {% if not friend_request_sent %}
                                 <form action="{{ url_for('send_friend_request', username=username) }}" method="get">
-                                    <button type="submit">Send Friend Request</button>
+                                    <button class="friend-request" type="submit">Send Friend Request</button>
                                 </form>
                             {% else %}
                                 <p>Friend request sent</p>
@@ -266,13 +281,18 @@
             </div>
 
 
-            <div class = "feed-container">
+            <div class="feed-container">
                 {% for post in posts %}
                 <div class="post-container">
                     <div class="user-info">
                         <img src="{{ post.author.profile_image }}" alt="Profile Picture">
                         <a style="text-decoration: none;" href="{{ url_for('profile', username=post.author.username) }}">{{ post.author.username }} </a>
                         <span class="post-date"> - {{ post.creation_date.strftime('%Y/%m/%d %H:%M') }}</span>
+                        {% if session['id'] == post.author.userid %}
+                        <form method="post" action="{{ url_for('delete_post', post_id=post.post_id) }}">
+                            <button type="submit" class="delete-button">Remove Post</button>
+                        </form>                    
+                        {% endif %}
                     </div>
                     <div class="post-content">
                         {% if post.image_url %}
@@ -280,9 +300,11 @@
                         {% endif %}
                         <p>{{ post.content }}</p>
                     </div>
+                    
                 </div>
                 {% endfor %}
-             </div>
+            </div>
+            
 
              <div class="pagination">
                 {% if posts.total > 0 %}

@@ -169,6 +169,25 @@ def profile(username):
     return render_template('profile.html', session=session, username=username, user=user, posts=posts)
 
 
+@app.route('/delete_post/<int:post_id>', methods=['POST'])
+def delete_post(post_id):
+    post = Post.query.get(post_id)
+    if not post:
+        return "Post not found!", 404
+
+    if post.userid != session.get('id'):
+        return "You are not authorized to delete this post.", 403
+
+    db.session.delete(post)
+    db.session.commit()
+
+    user = User.query.get(post.userid)
+    if user:
+        return redirect(url_for('profile', username=user.username))
+    return redirect(url_for('index'))
+
+
+
 @app.route('/edit_profile', methods=['GET', 'POST'])
 def edit_profile():
     if 'loggedin' not in session:

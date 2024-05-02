@@ -185,6 +185,9 @@
             text-decoration: none;
             color: #9ccddc;
         }
+        .notification{
+            padding: 10px;
+        }
         
     </style>
 </head>
@@ -227,7 +230,7 @@
         {% if friend_requests %}
         <ul>
             {% for request in friend_requests %}
-                <li>
+                <li class="notification">
                     {% set sender = senders[request.user1_id] %}
                     {{ sender.username }} wants to be friends
                     - <a href="{{ url_for('accept_friend_request', user1_id=sender.userid) }}">Accept</a>
