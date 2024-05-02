@@ -181,6 +181,27 @@
                 height: 50px;
                 width: 75px;
             }
+            .pagination-buttons {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            .pagination-button {
+                padding: 5px 10px;
+                margin: 0 5px;
+                background-color: #5591a9;
+                color: #062c43;
+                text-decoration: none;
+                border-radius: 3px;
+            }
+            .pagination-button:hover {
+                background-color: #4e859a;
+                color: #062c43;
+            }
+            .post-date {
+                font-size: 12px;
+                color: #759ba7;
+            }
         </style>
     </head>
 
@@ -238,8 +259,6 @@
                         {% endif %}
                     {% endif %}
                 </div>
-
-                
             </div>
 
 
@@ -248,7 +267,8 @@
                 <div class="post-container">
                     <div class="user-info">
                         <img src="{{ post.author.profile_image }}" alt="Profile Picture">
-                        <a href="{{ url_for('profile', username=post.author.username) }}">{{ post.author.username }}</a>
+                        <a style="text-decoration: none;" href="{{ url_for('profile', username=post.author.username) }}">{{ post.author.username }} </a>
+                        <span class="post-date"> - {{ post.creation_date.strftime('%Y/%m/%d %H:%M') }}</span>
                     </div>
                     <div class="post-content">
                         {% if post.image_url %}
@@ -259,6 +279,30 @@
                 </div>
                 {% endfor %}
              </div>
+
+             <div class="pagination">
+                {% if posts.total > 0 %}
+                <div class="pagination-buttons">
+                    {% if posts.has_prev %}
+                    <a class="pagination-button" href="{{ url_for('profile', username=username, page=1, count=15) }}">First</a>
+                    <a class="pagination-button" href="{{ url_for('profile', username=username, page=posts.prev_num, count=15) }}">Previous</a>
+                    {% endif %}
+            
+                    {% for p in posts.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+                    {% if p %}
+                    <a class="pagination-button {% if p == posts.page %}active{% endif %}" href="{{ url_for('profile', username=username, page=p, count=15) }}">{{ p }}</a>
+                    {% else %}
+                    <span class="ellipsis">...</span>
+                    {% endif %}
+                    {% endfor %}
+            
+                    {% if posts.has_next %}
+                    <a class="pagination-button" href="{{ url_for('profile', username=username, page=posts.next_num, count=15) }}">Next</a>
+                    <a class="pagination-button" href="{{ url_for('profile', username=username, page=posts.pages, count=15) }}">Last</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
 
             </div>
         </div>

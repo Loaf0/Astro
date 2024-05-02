@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, send_from_directory, url_for, session, abort
+from flask import Flask, flash, render_template, request, redirect, send_from_directory, url_for, session, abort
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from models import db, User, Friend, Post, PrivateMessage
@@ -22,19 +22,23 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in FILETYPES
 
+
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 
 @app.before_request
 def require_login():
     open_routes = ['login', 'register', 'static']
     if not session.get('loggedin') and request.endpoint not in open_routes:
         return redirect(url_for('login'))
+
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -56,7 +60,10 @@ def home():
         db.session.commit()
         return redirect(url_for('home'))
 
+    page = int(request.args.get('page', default='1'))
+    count = int(request.args.get('count', default='10'))
     show_friends = request.args.get('show_friends', 'no')
+
     user_id = session.get('id', None)
     if user_id:
         if show_friends == 'yes':
@@ -64,11 +71,16 @@ def home():
             friend_ids += db.session.query(Friend.user1_id).filter(Friend.user2_id == user_id, Friend.confirmation == 1).all()
             friend_ids = {fid[0] for fid in friend_ids} # stop duplicates froms showing
 
-            posts = Post.query.filter(Post.userid.in_(friend_ids)).order_by(Post.creation_date.desc()).all()
+            posts_query = Post.query.filter(Post.userid.in_(friend_ids)).order_by(Post.creation_date.desc())
         else:
-            posts = Post.query.order_by(Post.creation_date.desc()).all()
+            posts_query = Post.query.order_by(Post.creation_date.desc())
 
-        return render_template('home.html', posts=posts, show_friends=show_friends)
+        total_posts = posts_query.count()
+        total_pages = math.ceil(total_posts / count)
+        offset = (page - 1) * count
+        posts = posts_query.offset(offset).limit(count).all()
+
+        return render_template('home.html', posts=posts, total_pages=total_pages, page=page, count=count, show_friends=show_friends)
     else:
         return redirect(url_for('login'))
 
@@ -143,15 +155,18 @@ def register():
     return render_template('register.html', session=session, msg=msg)
 
 
-# example on how to link to profile {{ url_for('profile', username=user.username) }}
 @app.route('/profile/<username>')
 def profile(username):
     user = User.query.filter_by(username=username).first()
-    if user:
-        posts = Post.query.filter_by(userid=user.userid).all()
-        return render_template('profile.html', session=session, username=username, user=user, posts=posts)
-    else:
+    if not user:
         return "No profile found!", 404
+    
+    count = 15 
+    page = int(request.args.get('page', 1))
+
+    posts = Post.query.filter_by(userid=user.userid).order_by(Post.creation_date.desc()).paginate(page=page, per_page=count)
+
+    return render_template('profile.html', session=session, username=username, user=user, posts=posts)
 
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
@@ -167,6 +182,11 @@ def edit_profile():
         email = request.form['email'].strip()
         profile_image = request.files['profile_image']
         banner_image = request.files['banner_image']
+
+        if username != user.username:
+            if User.query.filter_by(username=username).first():
+                flash('This username is already taken. Please choose a different one.')
+                return render_template('edit_profile.html', user=user)
 
         if profile_image and allowed_file(profile_image.filename):
             filename = secure_filename(profile_image.filename)
@@ -184,14 +204,16 @@ def edit_profile():
             banner_image.save(banner_image_path)
             user.banner_image = url_for('uploaded_file', filename=banner_image_name)
 
-        # Update other fields
         user.username = username
         user.email = email
         db.session.commit()
 
-        return redirect(url_for('profile', username=user.username))
+        session['username'] = username
+
+        return redirect(url_for('profile', username=username))
 
     return render_template('edit_profile.html', user=user)
+
 
 
 @app.route("/messages")
@@ -251,9 +273,15 @@ def create_post():
 def send_friend_request(username):
     sender_id = session.get('id')
     receiver = User.query.filter_by(username=username).first()
+
+    existing_request = Friend.query.filter_by(user1_id=sender_id, user2_id=receiver.userid, confirmation=0).first()
+
     if receiver and sender_id != receiver.userid:
-        new_friend_request = Friend(user1_id=sender_id, user2_id=receiver.userid, confirmation=0)
-        db.session.add(new_friend_request)
+        if existing_request:
+            existing_request.confirmation = 1
+        else:
+            new_friend_request = Friend(user1_id=sender_id, user2_id=receiver.userid, confirmation=0)
+            db.session.add(new_friend_request)
         db.session.commit()
         return redirect(url_for('profile', username=receiver.username))
     else:

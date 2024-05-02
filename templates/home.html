@@ -144,6 +144,7 @@
                 max-height: 500px;
             }
             .user-info {
+                width: 100%;
                 display: flex;
                 align-items: center;
                 padding: 10px 0 0 10px;
@@ -208,6 +209,27 @@
                 offset: -10px;
                 box-shadow: inset 0 -15px 15px -10px rgba(85, 145, 169, 0.5);
             }
+            .pagination-buttons {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            .pagination-button {
+                padding: 5px 10px;
+                margin: 0 5px;
+                background-color: #5591a9;
+                color: #062c43;
+                text-decoration: none;
+                border-radius: 3px;
+            }
+            .pagination-button:hover {
+                background-color: #4e859a;
+                color: #062c43;
+            }
+            .post-date {
+                font-size: 12px;
+                color: #759ba7;
+            }
         </style>
     </head>
 
@@ -219,7 +241,6 @@
                 <button class="custom-file-upload" onclick="togglePostWindow()" style="align-self: flex-end;">Close</button>
                 <form method="POST" action="{{ url_for('home') }}" enctype="multipart/form-data">
                     <textarea rows="4" cols="50" maxlength="500" name="content" placeholder="What's on your mind?"></textarea>
-                    <!--<input type="text" name="content" placeholder="What's on your mind?">-->
                     <br>
                     <label for="file-upload" class="custom-file-upload">
                         <i class="fa fa-cloud-upload"></i> Upload Files
@@ -271,21 +292,42 @@
             </div>
 
 
-            <div class = "feed-container">
+            <div class="feed-container">
                 {% for post in posts %}
                 <div class="post-container">
                     <div class="user-info">
                         <img src="{{ post.author.profile_image }}" alt="Profile Picture">
-                        <a style="text-decoration: none;" href="{{ url_for('profile', username=post.author.username) }}">{{ post.author.username }}</a>
+                        <a style="text-decoration: none;" href="{{ url_for('profile', username=post.author.username) }}">{{ post.author.username }} </a>
+                        <span class="post-date">- {{ post.creation_date.strftime('%Y/%m/%d %H:%M') }}</span>
                     </div>
                     <div class="post-content">
                         {% if post.image_url %}
-                            <img class="post-image" src="{{ post.image_url }}" alt="Post Image">
+                        <img class="post-image" src="{{ post.image_url }}" alt="Post Image">
                         {% endif %}
                         <p style="max-width: fit-content; word-break: break-all; white-space: normal;">{{ post.content }}</p>
                     </div>
                 </div>
                 {% endfor %}
+            
+                <div class="pagination">
+                    {% if total_pages > 1 %}
+                    <div class="pagination-buttons">
+                        {% if page != 1 %}
+                        <a class="pagination-button" href="{{ url_for('home', page=1, count=count, show_friends=show_friends) }}">First</a>
+                        <a class="pagination-button" href="{{ url_for('home', page=page-1, count=count, show_friends=show_friends) }}">Previous</a>
+                        {% endif %}
+                
+                        {% for p in pagerange %}
+                        <a class="pagination-button {% if p == page %}active{% endif %}" href="{{ url_for('home', page=p, count=count, show_friends=show_friends) }}">{{ p }}</a>
+                        {% endfor %}
+                
+                        {% if page != total_pages %}
+                        <a class="pagination-button" href="{{ url_for('home', page=page+1, count=count, show_friends=show_friends) }}">Next</a>
+                        <a class="pagination-button" href="{{ url_for('home', page=total_pages, count=count, show_friends=show_friends) }}">Last</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
             
 
