@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 from models import db, User, Friend, Post, PrivateMessage
 from datetime import datetime
 import argon2
+from argon2.exceptions import VerifyMismatchError
 import math
 import re
 
@@ -85,6 +86,8 @@ def home():
         return redirect(url_for('login'))
 
 
+from argon2.exceptions import VerifyMismatchError
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -93,19 +96,27 @@ def login():
         
         user = User.query.filter(User.username.ilike(username)).first()
 
-        if user and argon2.PasswordHasher().verify(user.password, password):
-            session['loggedin'] = True
-            session['id'] = user.userid
-            session['username'] = user.username
-            session['profile_image'] = user.profile_image
-            session['admin'] = bool(user.admin_status)
+        if user:
+            try:
+                if argon2.PasswordHasher().verify(user.password, password):
+                    session['loggedin'] = True
+                    session['id'] = user.userid
+                    session['username'] = user.username
+                    session['profile_image'] = user.profile_image
+                    session['admin'] = bool(user.admin_status)
 
-            return redirect(url_for('profile', username=user.username))
+                    return redirect(url_for('profile', username=user.username))
+                else:
+                    msg = 'Invalid username or password'
+            except VerifyMismatchError:
+                msg = 'Invalid username or password'
         else:
             msg = 'Invalid username or password'
-            return render_template('login.html', msg=msg)
+        
+        return render_template('login.html', msg=msg)
 
-    return render_template('login.html', session=session)
+    return render_template('login.html')
+
 
 
 @app.route('/logout')
