@@ -166,18 +166,42 @@ def register():
     return render_template('register.html', session=session, msg=msg)
 
 
+
+from sqlalchemy import or_, and_
+
 @app.route('/profile/<username>')
 def profile(username):
     user = User.query.filter_by(username=username).first()
     if not user:
         return "No profile found!", 404
-    
-    count = 15 
-    page = int(request.args.get('page', 1))
 
+    show_friend_request_button = True
+    if 'id' in session:
+        friend_request = Friend.query.filter(
+            or_(
+                and_(Friend.user1_id == session['id'], Friend.user2_id == user.userid),
+                and_(Friend.user1_id == user.userid, Friend.user2_id == session['id'])
+            )
+        ).first()
+
+        if friend_request:
+            if friend_request.confirmation == 1:
+                show_friend_request_button = False  
+            elif friend_request.confirmation == 0:
+                if friend_request.user2_id == session['id']:
+                    show_friend_request_button = True
+                else:
+                    show_friend_request_button = False
+
+    count = 15
+    page = int(request.args.get('page', 1))
     posts = Post.query.filter_by(userid=user.userid).order_by(Post.creation_date.desc()).paginate(page=page, per_page=count)
 
-    return render_template('profile.html', session=session, username=username, user=user, posts=posts)
+    return render_template('profile.html', session=session, username=username, user=user, posts=posts,
+                           show_friend_request_button=show_friend_request_button)
+
+
+
 
 
 @app.route('/delete_post/<int:post_id>', methods=['POST'])

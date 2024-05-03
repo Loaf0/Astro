@@ -264,18 +264,10 @@
                 <div class="nameplate">
                     <img class="profile-image" src="{{ user.profile_image }}" alt="Profile Picture">
                     <span class="username">{{ username }}</span>
-                    {% if session['id'] != user.userid %}
-                        {% if not already_friends %}
-                            {% if not friend_request_sent %}
-                                <form action="{{ url_for('send_friend_request', username=username) }}" method="get">
-                                    <button class="friend-request" type="submit">Send Friend Request</button>
-                                </form>
-                            {% else %}
-                                <p>Friend request sent</p>
-                            {% endif %}
-                        {% else %}
-                            <p>You are already friends</p>
-                        {% endif %}
+                    {% if show_friend_request_button %}
+                        <form action="{{ url_for('send_friend_request', username=username) }}" method="get">
+                            <button class="friend-request" type="submit">Send Friend Request</button>
+                        </form>
                     {% endif %}
                 </div>
             </div>
