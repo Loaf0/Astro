@@ -175,8 +175,11 @@ def profile(username):
     if not user:
         return "No profile found!", 404
 
-    show_friend_request_button = True
-    if 'id' in session:
+    show_friend_request_button = False
+
+    if 'id' in session and user.userid != session['id']:
+        show_friend_request_button = True
+
         friend_request = Friend.query.filter(
             or_(
                 and_(Friend.user1_id == session['id'], Friend.user2_id == user.userid),
@@ -186,7 +189,7 @@ def profile(username):
 
         if friend_request:
             if friend_request.confirmation == 1:
-                show_friend_request_button = False  
+                show_friend_request_button = False
             elif friend_request.confirmation == 0:
                 if friend_request.user2_id == session['id']:
                     show_friend_request_button = True
@@ -199,6 +202,7 @@ def profile(username):
 
     return render_template('profile.html', session=session, username=username, user=user, posts=posts,
                            show_friend_request_button=show_friend_request_button)
+
 
 
 
